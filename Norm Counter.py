@@ -12,7 +12,7 @@ FUNC_log = lambda x, p1, p2, p3: -p2 / (x - p1) + p3
 
 def main():
     a = np.arange(0.5, 70.5, 1)
-    b = a + 2
+    b = a + 1
     files = os.listdir("Data/NR_Fit/Mass Data")
     files.sort()
     print(files)
@@ -65,13 +65,18 @@ def main():
     np.save("Data/NR_Fit/norm_fits", optimums)
 
     # check normalization curves
-    while True:
-        mass = float(input())
-        a = FUNC_log(mass, *optimums[0])
-        b = FUNC_log(mass, *optimums[1])
-        xs = np.arange(0, 70)
-        plt.plot(xs, FUNC_NORM(xs, a, b))
-        plt.show()
+    while true:
+        check = input("Check Normalizations? (yes/no)\n")
+        if check:
+                mass = float(input())
+                a = FUNC_log(mass, *optimums[0])
+                b = FUNC_log(mass, *optimums[1])
+                xs = np.arange(0, 70)
+                xy = FUNC_NORM(xs, a, b)
+                plt.plot(xs, xy)
+                plt.show()
+        else:
+            break
 
 
 if __name__ == "__main__":

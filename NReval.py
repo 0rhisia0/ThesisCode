@@ -83,8 +83,7 @@ def generateNR(mass, num):
     b = FUNC_norm_mass_interp(mass, *NORM[1])
     s1_dist = FUNC_norm_gen(a, b, num)
     s2_dist = skewNormGen(s1_dist, *SKEW)
-    data_arr = np.asarray([s1_dist, s2_dist])
-    return data_arr
+    return s1_dist, s2_dist
 
 
 def skewnorm_eval(s1, s2, xi_popts, ome_popts, alp_popts):
@@ -102,13 +101,15 @@ def skewnorm_eval(s1, s2, xi_popts, ome_popts, alp_popts):
 def evaluate_prob(s1, s2, mass):
     """
     evaluate_prob
-    evaluates the probability of a given event given WIMP mass (no poisson factor)
+    evaluates the log probability of a given event given WIMP mass (no poisson factor)
     """
     a = FUNC_norm_mass_interp(mass, *NORM[0])
     b = FUNC_norm_mass_interp(mass, *NORM[1])
-    prob = FUNC_norm(s1, a, b)
-    prob2 = skewnorm_eval(s1, s2, *SKEW)
-    return prob*prob2
+    prob = np.log(FUNC_norm(s1, a, b))
+    prob2 = np.log(skewnorm_eval(s1, s2, *SKEW))
+    if np.isnan(prob+prob2).any():
+        print(prob, prob2, "a=", a, "b=", b, "mass=", mass, "Prob")
+    return prob+prob2
 
 
 def sample_cont(mass):
@@ -160,9 +161,9 @@ def evaluate_fit(data1, data2):
     return average_significance
 
 
-for mass in tqdm(np.logspace(1, 3, 10)):
-    sample_cont(mass)
-
+# for mass in tqdm(np.logspace(1, 3, 10)):
+#     sample_cont(mass)
+#
 
 # data_true = np.load("100G.npy")
 # data_mask = data_true[0] < 100
