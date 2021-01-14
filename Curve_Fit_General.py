@@ -9,6 +9,7 @@ STEP = 0.05
 FUNC_EPS = lambda x, p1, p2, p3: p1 * (abs(x + p2)) ** 0.25 + p3
 FUNC_OME = lambda x, p1, p2, p3: p1 / (x - p2) + p3
 FUNC_ALP = lambda x, p1, p2: -p1 * x ** 0.5 + p2
+FUNC_NORM = lambda x, p1, p2: lognorm.pdf(x, s=p1, scale=p2, loc=0)
 
 def skewNormNew(x, xi, omega, alpha, A):
     """
@@ -16,15 +17,6 @@ def skewNormNew(x, xi, omega, alpha, A):
     """
     return A * np.exp(-0.5 * (pow((x - xi) / omega, 2.))) / (np.sqrt(2. * np.pi) * omega) * erfc(
         -1. * alpha * (x - xi) / omega / np.sqrt(2.))
-
-
-""" Deprecated Skew normal function for fitting purposes"""
-# def skewNorm(S1, S2, eps_popt, omeg_popt, alp_popt, norm_popt):
-#     eps = FUNC_EPS(S1, eps_popt[0], eps_popt[1], eps_popt[2])
-#     omeg = FUNC_OME(S1, omeg_popt[0], omeg_popt[1], omeg_popt[2], omeg_popt[3], omeg_popt[4])
-#     alp = FUNC_ALP(S1, alp_popt[0], alp_popt[1], alp_popt[2], alp_popt[3])
-#     norm = FUNC_NORM(S1, norm_popt[0], norm_popt[1], norm_popt[2], norm_popt[3])
-#     return skewnorm.pdf(S2, alp, loc=eps, scale=omeg) * norm
 
 
 def getData():
@@ -87,6 +79,7 @@ def fitToS1S2(data):
         popt, pcov = curve_fit(skewNormNew, bin_centers, y, p0=[4, 0.1, 0, norm_fact],
                                bounds=([logS2Min, 0., -3., 0.], [logS2Max, 1., 3., 1e7]))
         xi[i], ome[i], alp[i], norms[i] = popt
+        norms[i] = norm_fact  # retain true value for fitting instead of fitted value
         S1_param[i] = (MIN + MAX) / 2
 
 
@@ -105,7 +98,7 @@ def fitToS1S2(data):
         # fig.savefig("C:/Users/Ishira/Pictures/LZ/GIF/" + str(i) + "_GREG.png")
         # plt.close(fig)
     a = np.stack((S1_param, xi, ome, alp, norms))
-    np.save('Data/NR_Fit/fit_data', a)
+    np.save('Data/ER_Fit/ER_fit_data', a)  # saves fit
     print(a)
 
 
@@ -145,8 +138,7 @@ def main():
     """
     main loop to load, fit and interpolate slices
     """
-
-    data = np.load('Data/NR_Fit/GregNR.npy')  # data to be fit loaded from clean numpy file
+    data = np.load()  # data to be fit loaded from clean numpy file
     fitToS1S2(data)
 
     # Parameter fits
@@ -182,8 +174,24 @@ def main():
     plt.xlabel("S1[phd]")
     plt.show()
 
+    # fit normalization
+    norm_factor = np.sum(a[4])
+    norm_counts = a[4]/norm_factor
+    norm_popt, norm_pcov = curve_fit(FUNC_NORM, a[0], norm_counts,
+                                     bounds=([-np.inf, -np.inf], [np.inf, np.inf]),
+                                     p0=[10, 0.5])
+    plt.scatter(a[0], norm_counts)
+    norms = FUNC_NORM(a[0], norm_popt[0], norm_popt[1])
+    plt.plot(a[0], norms)
+    plt.ylabel("Normalization Counts")
+    plt.xlabel("S1[phd]")
+    plt.show()
+
+
     opts = np.asarray([eps_popt, omeg_popt, alp_popt])
-    np.save("Data/NR_Fit/NR_popts", opts)  # saves interpolation parameters
+    np.save("Data/ER_Fit/ER_popts", opts)  # saves interpolation parameters
+
+
 
 
 if __name__ == "__main__":
