@@ -4,12 +4,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from scipy.special import erfc
+from scipy.stats import lognorm
+from scipy.integrate import cumtrapz
 
 STEP = 0.05
 FUNC_EPS = lambda x, p1, p2, p3: p1 * (abs(x + p2)) ** 0.25 + p3
-FUNC_OME = lambda x, p1, p2, p3: p1 / (x - p2) + p3
-FUNC_ALP = lambda x, p1, p2: -p1 * x ** 0.5 + p2
-FUNC_NORM = lambda x, p1, p2: lognorm.pdf(x, s=p1, scale=p2, loc=0)
+FUNC_OME = lambda x, p1, p2, p3, p4, p5: p1/(x-p4) - p2/(x-p4)**2 + p3*(x-p4)+p5
+FUNC_ALP = lambda x, p1, p2, p3, p4, p5: p1/(x-p4) - p2/(x-p4)**2 + p3*(x-p4)+p5
+FUNC_NORM = lambda x, p1, p2, p3: p1/(x)**(1.5) + p2/(x**3) + p3
 
 def skewNormNew(x, xi, omega, alpha, A):
     """
@@ -19,11 +21,11 @@ def skewNormNew(x, xi, omega, alpha, A):
         -1. * alpha * (x - xi) / omega / np.sqrt(2.))
 
 
-def getData():
+def getData(file):
     """
     loads Data from text file output by NEST
     """
-    f = open("ERDATA.txt", "r")
+    f = open(file, "r")
     lines = f.readlines()
     S1 = np.zeros(len(lines))
     S2 = np.zeros(len(lines))
@@ -138,11 +140,13 @@ def main():
     """
     main loop to load, fit and interpolate slices
     """
-    data = np.load()  # data to be fit loaded from clean numpy file
-    fitToS1S2(data)
+    # data = getData('Data/ER_Fit/ERDATA.txt')
+    # np.save('Data/ER_Fit/ER_data_np', data)  # data to be fit loaded from clean numpy file
+    # data = np.load('Data/ER_Fit/ER_data_np.npy')
+    # fitToS1S2(data)
 
     # Parameter fits
-    a = np.load('Data/NR_Fit/fit_data.npy')  # params generated from fit
+    a = np.load('Data/ER_Fit/ER_fit_data.npy')  # params generated from fit
 
     # fit epsilon param
     eps_popt, eps_pcov = curve_fit(FUNC_EPS, a[0], a[1])
@@ -157,8 +161,8 @@ def main():
     # fit ome param
     omeg_popt, omeg_pcov = curve_fit(FUNC_OME, a[0], a[2])
     plt.scatter(a[0], a[2])
-    omeg = FUNC_OME(a[0], omeg_popt[0], omeg_popt[1], omeg_popt[2])
-    plt.plot(a[0], omeg)
+    omeg = FUNC_OME(a[0], omeg_popt[0], omeg_popt[1], omeg_popt[2], omeg_popt[3], omeg_popt[4])
+    plt.plot(a[0], omeg, color="red")
     plt.ylabel(r'$\omega')
     plt.xlabel("S1[phd]")
     plt.ylim(0, .4)
@@ -166,10 +170,11 @@ def main():
 
     # fit alp param
     alp_popt, alp_pcov = curve_fit(FUNC_ALP, a[0], a[3])
+    print(alp_popt)
     plt.scatter(a[0], a[3])
     plt.ylim(-3, 3)
-    alp = FUNC_ALP(a[0], alp_popt[0], alp_popt[1])
-    plt.plot(a[0], alp)
+    alp = FUNC_ALP(a[0], alp_popt[0], alp_popt[1], alp_popt[2], alp_popt[3], alp_popt[4])
+    plt.plot(a[0], alp, color="red")
     plt.ylabel(r'$\alpha')
     plt.xlabel("S1[phd]")
     plt.show()
@@ -177,16 +182,18 @@ def main():
     # fit normalization
     norm_factor = np.sum(a[4])
     norm_counts = a[4]/norm_factor
-    norm_popt, norm_pcov = curve_fit(FUNC_NORM, a[0], norm_counts,
-                                     bounds=([-np.inf, -np.inf], [np.inf, np.inf]),
-                                     p0=[10, 0.5])
+    norm_popt, norm_pcov = curve_fit(FUNC_NORM, a[0], norm_counts)
     plt.scatter(a[0], norm_counts)
-    norms = FUNC_NORM(a[0], norm_popt[0], norm_popt[1])
-    plt.plot(a[0], norms)
+    domain = np.linspace(1, 100, 99)
+    norms = FUNC_NORM(domain, norm_popt[0], norm_popt[1], norm_popt[2])
+    print(norms)
+    area = cumtrapz(norms, domain)
+    print(area)
+    plt.plot(domain, norms, color="red")
+
     plt.ylabel("Normalization Counts")
     plt.xlabel("S1[phd]")
     plt.show()
-
 
     opts = np.asarray([eps_popt, omeg_popt, alp_popt])
     np.save("Data/ER_Fit/ER_popts", opts)  # saves interpolation parameters
