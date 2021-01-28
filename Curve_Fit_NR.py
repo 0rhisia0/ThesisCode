@@ -146,10 +146,10 @@ def main():
     main loop to load, fit and interpolate slices
     """
 
-    data = np.load('Data/NR_Fit/GregNR.npy')  # data to be fit loaded from clean numpy file
-    fitToS1S2(data)
-
-    # Parameter fits
+    # data = np.load('Data/NR_Fit/GregNR.npy')  # data to be fit loaded from clean numpy file
+    # fitToS1S2(data)
+    #
+    # # Parameter fits
     a = np.load('Data/NR_Fit/fit_data.npy')  # params generated from fit
 
     # fit epsilon param
@@ -166,8 +166,8 @@ def main():
     omeg_popt, omeg_pcov = curve_fit(FUNC_OME, a[0], a[2])
     plt.scatter(a[0], a[2])
     omeg = FUNC_OME(a[0], omeg_popt[0], omeg_popt[1], omeg_popt[2])
-    plt.plot(a[0], omeg)
-    plt.ylabel(r'$\omega')
+    plt.plot(a[0], omeg, color="r")
+    plt.ylabel(r'$\omega$')
     plt.xlabel("S1[phd]")
     plt.ylim(0, .4)
     plt.show()
@@ -177,8 +177,8 @@ def main():
     plt.scatter(a[0], a[3])
     plt.ylim(-3, 3)
     alp = FUNC_ALP(a[0], alp_popt[0], alp_popt[1])
-    plt.plot(a[0], alp)
-    plt.ylabel(r'$\alpha')
+    plt.plot(a[0], alp, color="r")
+    plt.ylabel(r'$\alpha$')
     plt.xlabel("S1[phd]")
     plt.show()
 

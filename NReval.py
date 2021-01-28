@@ -105,11 +105,11 @@ def evaluate_prob(s1, s2, mass):
     """
     a = FUNC_norm_mass_interp(mass, *NORM[0])
     b = FUNC_norm_mass_interp(mass, *NORM[1])
-    prob = np.log(FUNC_norm(s1, a, b))
-    prob2 = np.log(skewnorm_eval(s1, s2, *SKEW))
+    prob = FUNC_norm(s1, a, b)
+    prob2 = skewnorm_eval(s1, s2, *SKEW)
     if np.isnan(prob+prob2).any():
-        print(prob, prob2, "a=", a, "b=", b, "mass=", mass, "Prob")
-    return prob+prob2
+        print("AAH")
+    return prob*prob2
 
 
 def sample_cont(mass):
@@ -125,7 +125,14 @@ def sample_cont(mass):
     # plt.close(fig)
 
 def evaluate_fit(data1, data2):
-    # slice the data then evaluate fits for each one.
+    """
+    evaluate_fit
+    Conducts an Anderson K-Sample Test, to test the similarity
+    between two provided data samples of shape (2, n) where n
+    is the number of events
+    inputs: data1, data2
+    returns: Average AKS value.
+    """
     S1 = data1[0]
     S2 = np.log10(data1[1])
     S1_2 = data2[0]

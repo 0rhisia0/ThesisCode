@@ -6,7 +6,7 @@ samples = np.load("Data/Execution files/samples1.npy")
 
 # bins = [np.logspace(0, 3, 500), np.linspace(-50, -35, 500)]
 samples = samples[:, :]
-plt.scatter(samples[800:, 0], samples[800:, 1], alpha=0.01)
+plt.scatter(samples[:, 0], samples[:, 1], alpha=0.05)
 plt.xlim(1, 1000)
 plt.ylim(-49, -43)
 plt.xscale("log")

@@ -12,13 +12,23 @@ E_r = np.arange(Emin, Emax, del_Er)
 
 
 # Finds log likelihood of poisson component of WIMP events for S1, S2 data
-def pois_like_S1S2(mass, xsec, num_events, A=const.AXe, E_thr=6*const.keV):
+def pois_like_signal(mass, xsec, num_events, A=const.AXe, E_thr=6*const.keV):
     WIMP = [mass*const.GeV, (10**xsec)*const.cm2]
     E_ev, int_rate = fn.integrate_rate(E_r, WIMP, A)
     idx = find_nearest_idx(E_ev, E_thr)
     pred_events = int_rate[idx] * BULK
     poisson_prob = poisson.logpmf(num_events, pred_events)
     return poisson_prob
+
+
+# Finds log likelihood of poisson component of WIMP events for S1, S2 data
+def pois_like(mass, xsec, num_events, pred_ER, A=const.AXe, E_thr=6*const.keV):
+    WIMP = [mass*const.GeV, (10**xsec)*const.cm2]
+    E_ev, int_rate = fn.integrate_rate(E_r, WIMP, A)
+    idx = find_nearest_idx(E_ev, E_thr)
+    pred_NR = int_rate[idx] * BULK
+    poisson_prob = poisson.logpmf(num_events, pred_NR + pred_ER)
+    return poisson_prob, pred_NR
 
 
 def find_indices(E_r, events):

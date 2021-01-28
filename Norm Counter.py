@@ -41,7 +41,7 @@ def main():
                                          p0=[10, 0.5])
         # fits FUNC_NORM and returns parameters/covariance of fit
 
-        # test_plot(xvals, norms, norm_popt)  # optional test plots
+        test_plot(xvals, norms, norm_popt, mass)  # optional test plots
 
         popts.append([mass, *norm_popt])
 
@@ -78,7 +78,7 @@ def main():
         else:
             break
 
-def test_plot(xvals, norms, norm_popt):
+def test_plot(xvals, norms, norm_popt, mass):
     """
     code to test plot the interpolation
     of any fixed parameter S1 normalization curve
@@ -89,7 +89,7 @@ def test_plot(xvals, norms, norm_popt):
     estim = FUNC_NORM(testx, *norm_popt)
     plt.plot(testx, estim)
     max = xvals[np.argmax(norms)]
-    plt.vlines(xvals[np.argmax(norms)], 0, 0.1)
+    plt.vlines(max, 0, np.max(norms))
     plt.xlabel("S1[phd]")
     plt.ylabel("Counts")
     plt.title(str(mass)+"GeV")

@@ -9,9 +9,9 @@ from scipy.integrate import cumtrapz
 
 STEP = 0.05
 FUNC_EPS = lambda x, p1, p2, p3: p1 * (abs(x + p2)) ** 0.25 + p3
-FUNC_OME = lambda x, p1, p2, p3, p4, p5: p1/(x-p4) - p2/(x-p4)**2 + p3*(x-p4)+p5
+FUNC_OME = lambda x, p1, p2, p3, p4: p1/(x-p4) - p2/(x-p4)**2 + p3*(x-p4)
 FUNC_ALP = lambda x, p1, p2, p3, p4, p5: p1/(x-p4) - p2/(x-p4)**2 + p3*(x-p4)+p5
-FUNC_NORM = lambda x, p1, p2, p3: p1/(x)**(1.5) + p2/(x**3) + p3
+FUNC_NORM = lambda x, p1, p2, p3, p4: p1/(x-p4)**(1.5) + p2/(x**3-p4) + p3
 
 def skewNormNew(x, xi, omega, alpha, A):
     """
@@ -161,9 +161,9 @@ def main():
     # fit ome param
     omeg_popt, omeg_pcov = curve_fit(FUNC_OME, a[0], a[2])
     plt.scatter(a[0], a[2])
-    omeg = FUNC_OME(a[0], omeg_popt[0], omeg_popt[1], omeg_popt[2], omeg_popt[3], omeg_popt[4])
+    omeg = FUNC_OME(a[0], omeg_popt[0], omeg_popt[1], omeg_popt[2], omeg_popt[3])
     plt.plot(a[0], omeg, color="red")
-    plt.ylabel(r'$\omega')
+    plt.ylabel(r'$\omega$')
     plt.xlabel("S1[phd]")
     plt.ylim(0, .4)
     plt.show()
@@ -175,28 +175,27 @@ def main():
     plt.ylim(-3, 3)
     alp = FUNC_ALP(a[0], alp_popt[0], alp_popt[1], alp_popt[2], alp_popt[3], alp_popt[4])
     plt.plot(a[0], alp, color="red")
-    plt.ylabel(r'$\alpha')
+    plt.ylabel(r'$\alpha$')
     plt.xlabel("S1[phd]")
     plt.show()
 
     # fit normalization
     norm_factor = np.sum(a[4])
     norm_counts = a[4]/norm_factor
-    norm_popt, norm_pcov = curve_fit(FUNC_NORM, a[0], norm_counts)
+    norm_popt, norm_pcov = curve_fit(FUNC_NORM, a[0], norm_counts,
+                                     bounds=([-np.inf, -np.inf, -np.inf, -10], [np.inf, np.inf, np.inf, -1]))
     plt.scatter(a[0], norm_counts)
-    domain = np.linspace(1, 100, 99)
-    norms = FUNC_NORM(domain, norm_popt[0], norm_popt[1], norm_popt[2])
-    print(norms)
-    area = cumtrapz(norms, domain)
-    print(area)
+    domain = np.linspace(1.5, 100, 500)
+    norms = FUNC_NORM(domain, norm_popt[0], norm_popt[1], norm_popt[2], norm_popt[3])
+    norm_area = cumtrapz(norms, domain)
     plt.plot(domain, norms, color="red")
-
     plt.ylabel("Normalization Counts")
     plt.xlabel("S1[phd]")
     plt.show()
-
-    opts = np.asarray([eps_popt, omeg_popt, alp_popt])
+    norm_popt = np.append(norm_popt, norm_area[-1])
+    opts = np.asarray([eps_popt, omeg_popt, alp_popt, norm_popt])
     np.save("Data/ER_Fit/ER_popts", opts)  # saves interpolation parameters
+    print(opts)
 
 
 
