@@ -119,7 +119,7 @@ def evaluate_fit(data1, data2):
         if len(S2a) != 0 and len(S2b) != 0:
             print("S1=" + str(s1))
             stat = anderson_ksamp([S2a, S2b])
-            print(stat)
+            print(stat[0], stat[2])
             stats.append(stat[0])
             if len(S2a) > len(S2b):
                 S2a = S2a[:len(S2b)]
@@ -151,14 +151,13 @@ def main():
     ER_actual = np.load("Data/ER_Fit/ER_data_np.npy")
     ER_actual = ER_actual.astype(np.longdouble)
     ER_actual = ER_actual[:, np.random.choice(ER_actual.shape[1], 100, replace=False)]
-    # ER_actual = ER_actual[np.where(ER_actual[0] < 100)]
     mask = ER_actual[0] < 100
     ER_actual = ER_actual[:, mask]
-    # ER_actual = generateER(20000)
-    # count = evaluate_fit(ER_actual, ER_gen)
-    # print
-    prob = evaluate_prob(ER_actual[0][:], np.log10(ER_actual[1][:]))
-    print(np.log(np.sum(prob)))
+    ER_gen = generateER(20000)
+    count = evaluate_fit(ER_actual, ER_gen)
+
+    # prob = evaluate_prob(ER_actual[0][:], np.log10(ER_actual[1][:]))
+    # print(np.log(np.sum(prob)))
 
 if __name__ == "__main__":
     main()

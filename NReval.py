@@ -25,6 +25,7 @@ def FUNC_norm_gen(p1, p2, num):
     return lognorm.rvs(p1, loc=0, scale=p2, size=num)
 
 
+
 def FUNC_norm_mass_interp(x, p1, p2, p3):
     """
     FUNC_norm_mass_interp
@@ -107,8 +108,10 @@ def evaluate_prob(s1, s2, mass):
     b = FUNC_norm_mass_interp(mass, *NORM[1])
     prob = FUNC_norm(s1, a, b)
     prob2 = skewnorm_eval(s1, s2, *SKEW)
-    if np.isnan(prob+prob2).any():
-        print("AAH")
+    if np.isnan(prob.any()):
+        print("Norm")
+    if np.isnan(prob2.any()):
+        print("Skew")
     return prob*prob2
 
 

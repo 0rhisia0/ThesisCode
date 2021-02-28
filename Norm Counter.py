@@ -7,7 +7,8 @@ import os
 
 plt.style.use("seaborn-talk")
 FUNC_NORM = lambda x, p1, p2: lognorm.pdf(x, s=p1, scale=p2, loc=0)
-FUNC_log = lambda x, p1, p2, p3: -p2 / (x - p1) + p3
+FUNC_log = lambda x, p1, p2, p3: -p2/(x-p1)+p3
+
 
 
 def main():
@@ -41,7 +42,7 @@ def main():
                                          p0=[10, 0.5])
         # fits FUNC_NORM and returns parameters/covariance of fit
 
-        test_plot(xvals, norms, norm_popt, mass)  # optional test plots
+        # test_plot(xvals, norms, norm_popt, mass)  # optional test plots
 
         popts.append([mass, *norm_popt])
 
@@ -51,8 +52,10 @@ def main():
     for i in range(1, 3):
         plt.scatter(popts[:, 0], popts[:, i])
         opts, cov = curve_fit(FUNC_log, popts[:, 0], popts[:, i])
-        xvals = np.arange(10, 1000)
+        xvals = np.arange(3, 1000)
+
         optimums.append(opts)
+        print(FUNC_log(xvals, *opts)[0])
         plt.plot(xvals, FUNC_log(xvals, *opts))
         plt.xlabel("WIMP Mass [GeV]")
         if i == 1:
