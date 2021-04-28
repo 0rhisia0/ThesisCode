@@ -80,8 +80,8 @@ def diff_rate(E_r, WIMP, A):
     conv_fact = const.kg * const.day * const.keV * (const.c ** 2)
     M_T = const.Mn * A
     mu = const.Mn * A * M_D / (M_D + const.Mn * A)
-    mun = const.Mn * M_D / (M_D + const.Mn)
-    constant = const.N0 * sigma * const.rho * M_T / (2 * mun ** 2 * M_D)
+    mu_n = const.Mn * M_D / (M_D + const.Mn)
+    constant = const.N0 * sigma * const.rho * M_T / (2 * mu_n ** 2 * M_D)
     return constant * A * form_factor(E_r, A) ** 2 * vel_integral(M_T, E_r, mu) * conv_fact
 
 

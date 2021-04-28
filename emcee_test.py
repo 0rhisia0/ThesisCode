@@ -7,8 +7,9 @@ import Likelihood as lk
 import tqdm
 from numpy.random import randint
 from scipy.stats import lognorm, norm, loguniform
-tmass = 300
-events = 10
+
+tmass = 50
+events = 1000
 
 # prior for evaluation. Rejects proposal point if prior is less than 0
 def log_prior(theta):
@@ -25,6 +26,7 @@ def log_like(theta, s1, s2):
     xsec = theta[1]
     num_events = len(s1)
     pois_like = lk.pois_like_signal(mass, xsec, num_events)
+    error_term = 1
     return pois_like+np.sum(NReval.evaluate_prob(s1, s2, mass))
 
 # log_probability of current parameters given data
@@ -44,9 +46,6 @@ def proposal(vals, random):
     for i in range(vals.shape[0]):
         new_vals[i][0] = lognorm.rvs(0.3, loc=0, scale=vals[i][0])
         new_vals[i][1] = norm.rvs(vals[i][1], 1)
-        while log_prior(new_vals[i]) != 0:
-            new_vals[i][0] = lognorm.rvs(0.3, loc=0, scale=vals[i][0])
-            new_vals[i][1] = norm.rvs(vals[i][1], 2)
     return new_vals, factors
 
 
@@ -55,7 +54,6 @@ def proposal(vals, random):
 # data = (data[0], np.log10(data[1]))
 
 data = NReval.generateNR(tmass, events)
-print(data)
 plt.scatter(*data, alpha=0.2)
 plt.xlabel(r"$S1[phd]$")
 plt.ylabel(r"$log_{10}(S2)$")
@@ -64,16 +62,16 @@ plt.show()
 
 ndim = 2
 nwalkers = 5
-steps = 1000
+steps = 2000
 pos = [[randint(3, 1000), randint(-49, -36)+0.001] for i in range(nwalkers)]
 
 
-sampler = emcee.EnsembleSampler(nwalkers, ndim, log_probability, args=[data, ndim])   # moves=emcee.moves.MHMove(proposal, ndim=2)
+sampler = emcee.EnsembleSampler(nwalkers, ndim, log_probability, args=[data, ndim]) #,# moves=emcee.moves.MHMove(proposal, ndim=2))
 sampler.run_mcmc(pos, steps)
 
-flat_samples = sampler.get_chain(discard=0, flat=True)
+flat_samples = sampler.get_chain(discard=250, flat=False)
 print(flat_samples.shape)
-np.save("Data/Execution files/samples1", flat_samples)
+np.save("Data/Execution files/3", flat_samples)
 
 # mass, xsec, num_events
 

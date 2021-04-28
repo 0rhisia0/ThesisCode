@@ -1,4 +1,4 @@
-from scipy.stats import skewnorm, gamma
+from scipy.stats import skewnorm, gamma, anderson_ksamp
 from scipy.optimize import curve_fit
 import numpy as np
 import matplotlib.pyplot as plt
@@ -6,6 +6,8 @@ from tqdm import tqdm
 from scipy.special import erfc
 from scipy.stats import lognorm
 from scipy.integrate import cumtrapz
+import EReval
+
 
 STEP = 0.05
 FUNC_EPS = lambda x, p1, p2, p3: p1 * (abs(x + p2)) ** 0.25 + p3
@@ -142,7 +144,7 @@ def main():
     """
     # data = getData('Data/ER_Fit/ERDATA.txt')
     # np.save('Data/ER_Fit/ER_data_np', data)  # data to be fit loaded from clean numpy file
-    # data = np.load('Data/ER_Fit/ER_data_np.npy')
+    data = np.load('Data/ER_Fit/ER_data_np.npy')
     # fitToS1S2(data)
 
     # Parameter fits
@@ -153,19 +155,23 @@ def main():
     plt.scatter(a[0], a[1])
     eps = FUNC_EPS(a[0], eps_popt[0], eps_popt[1], eps_popt[2])
     plt.plot(a[0], eps, color="r")
-    plt.ylabel(r'$\xi$')
-    plt.xlabel("S1[phd]")
+    print(eps_popt)
+    plt.ylabel(r'Location, $\varepsilon$', fontsize=17)
+    plt.xlabel("S1[phd]", fontsize=17)
     plt.ylim(2, 5)
+    plt.text(5, 3, r"$\varepsilon(S1)\approx 0.4656\cdot (|S1+6.0221|)^{0.25}+3.1364$", fontsize=14)
     plt.show()
 
     # fit ome param
     omeg_popt, omeg_pcov = curve_fit(FUNC_OME, a[0], a[2])
     plt.scatter(a[0], a[2])
     omeg = FUNC_OME(a[0], omeg_popt[0], omeg_popt[1], omeg_popt[2], omeg_popt[3])
+    print(omeg_popt)
     plt.plot(a[0], omeg, color="red")
-    plt.ylabel(r'$\omega$')
-    plt.xlabel("S1[phd]")
+    plt.ylabel(r'Scale, $\omega$', fontsize=17)
+    plt.xlabel("S1[phd]", fontsize=17)
     plt.ylim(0, .4)
+    plt.text(0, 0.25, r"$\omega(S1)\approx\frac{114.1}{S1+35.078}-\frac{299.91}{(S1+35.078)^2}+0.00042\cdot(S1+35.078)$", fontsize=12)
     plt.show()
 
     # fit alp param
@@ -174,9 +180,13 @@ def main():
     plt.scatter(a[0], a[3])
     plt.ylim(-3, 3)
     alp = FUNC_ALP(a[0], alp_popt[0], alp_popt[1], alp_popt[2], alp_popt[3], alp_popt[4])
+    print(alp_popt)
+    plt.text(0, -1,
+             r"$\alpha(S1)\approx\frac{226.6}{S1+18.91}-\frac{3434.2}{(S1+18.91)^2}+0.0184\cdot(S1+18.91)-2.401$",
+             fontsize=11.5)
     plt.plot(a[0], alp, color="red")
-    plt.ylabel(r'$\alpha$')
-    plt.xlabel("S1[phd]")
+    plt.ylabel(r'Skewness, $\alpha$', fontsize=17)
+    plt.xlabel("S1[phd]", fontsize=17)
     plt.show()
 
     # fit normalization
@@ -188,12 +198,23 @@ def main():
     domain = np.linspace(1.5, 100, 500)
     norms = FUNC_NORM(domain, norm_popt[0], norm_popt[1], norm_popt[2], norm_popt[3])
     norm_area = cumtrapz(norms, domain)
+    print(norm_popt)
     plt.plot(domain, norms, color="red")
-    plt.ylabel("Normalization Counts")
-    plt.xlabel("S1[phd]")
+    plt.ylabel("Counts", fontsize=17)
+    plt.xlabel("S1[phd]", fontsize=17)
+    plt.text(5, 0.005, r"$N(S1)\approx \frac{0.055}{(S1+1.502) ^ {1.5}} - \frac{0.141}{S1^3+1.502}+0.01$", fontsize=15)
+    plt.ylim(0, 0.015)
     plt.show()
     norm_popt = np.append(norm_popt, norm_area[-1])
     opts = np.asarray([eps_popt, omeg_popt, alp_popt, norm_popt])
+
+    S1_act = data[0, :]
+    S1_act = S1_act[S1_act<100][:10000]
+    S1_pred = EReval.generateER(10000)[0]
+    plt.hist(S1_act, alpha=0.8)
+    plt.hist(S1_pred, alpha=0.8)
+    plt.show()
+    # print(anderson_ksamp([S1_act, S1_pred]))
     np.save("Data/ER_Fit/ER_popts", opts)  # saves interpolation parameters
     print(opts)
 

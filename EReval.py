@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import BoundaryNorm
 from matplotlib.ticker import MaxNLocator
 from tqdm import tqdm
+from tabulate import tabulate
 
 ER_POPT = np.load("Data/ER_Fit/ER_popts.npy", allow_pickle=True)
 SKEW = ER_POPT[0:3]
@@ -82,7 +83,7 @@ def generateER(num):
     """
     generateNR
     Generates S1 and S2 events
-    inputs: mass of WIMP, number of events
+    inputs: number of events
     """
     FUNC_NORM = FuncNormGen(name="FUNC_NORM", a=1.5, b=100, shapes="p1, p2, p3, p4, A")
     s1_dist = FUNC_NORM.rvs(*NORM, size=num)
@@ -98,6 +99,7 @@ def evaluate_prob(s1, s2):
     FUNC_NORM = FuncNormGen(name="FUNC_NORM", a=1.5, b=100, shapes="p1, p2, p3, p4, A")
     prob = FUNC_NORM.pdf(s1, *NORM)
     prob2 = skewnorm_eval(s1, s2, *SKEW)
+    # print(prob, prob2)
     return prob * prob2
 
 
@@ -109,19 +111,19 @@ def evaluate_fit(data1, data2):
     S2_2 = data2[1]
     a = np.arange(0.5, 70.5, 1)
     b = a + 2
-    stats = []
+    table = []
     for i in range(len(b)):
         MIN = a[i]
         MAX = b[i]
         s1 = MIN + .5
         S2a = S2[(MIN < S1) & (S1 < MAX)]
         S2b = S2_2[(MIN < S1_2) & (S1_2 < MAX)]
-        if len(S2a) != 0 and len(S2b) != 0:
-            print("S1=" + str(s1))
+        if len(S2a) != 0 and len(S2b)!=0:
             stat = anderson_ksamp([S2a, S2b])
-            print(stat[0], stat[2])
-            stats.append(stat[0])
-            if len(S2a) > len(S2b):
+            print(stat)
+            # print(stat)
+            table.append([s1, stat[0], stat[2]])
+            if len(S2a)>len(S2b):
                 S2a = S2a[:len(S2b)]
             else:
                 S2b = S2b[:len(S2a)]
@@ -134,8 +136,7 @@ def evaluate_fit(data1, data2):
             #     plt.hist(S2a, bins, alpha=0.5, label='x')
             #     plt.hist(S2b, bins, alpha=0.5, label='y')
             #     plt.show()
-    average_significance = np.average(stats)
-    return average_significance
+    return table
 
 
 def main():
@@ -150,11 +151,13 @@ def main():
     # plt.show()
     ER_actual = np.load("Data/ER_Fit/ER_data_np.npy")
     ER_actual = ER_actual.astype(np.longdouble)
-    ER_actual = ER_actual[:, np.random.choice(ER_actual.shape[1], 100, replace=False)]
+    ER_actual = ER_actual[:, np.random.choice(ER_actual.shape[1], 100, replace=True)]
     mask = ER_actual[0] < 100
     ER_actual = ER_actual[:, mask]
     ER_gen = generateER(20000)
-    count = evaluate_fit(ER_actual, ER_gen)
+    table = evaluate_fit(ER_actual, ER_gen)
+    headers = ["S1 bin [phd]", "k-samp Anderson Statistic", "p-value"]
+    print(tabulate(table, headers, tablefmt="latex_longtable"))
 
     # prob = evaluate_prob(ER_actual[0][:], np.log10(ER_actual[1][:]))
     # print(np.log(np.sum(prob)))

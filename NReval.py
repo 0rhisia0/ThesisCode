@@ -2,6 +2,7 @@ from scipy.stats import skewnorm, lognorm, anderson_ksamp, ks_2samp
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+from tabulate import tabulate
 SKEW = np.load("Data/NR_Fit/NR_popts.npy", allow_pickle=True)
 NORM = np.load("Data/NR_Fit/norm_fits.npy")
 plt.style.use("seaborn-talk")
@@ -142,7 +143,7 @@ def evaluate_fit(data1, data2):
     S2_2 = data2[1]
     a = np.arange(0.5, 70.5, 1)
     b = a + 2
-    stats = []
+    table = []
     for i in range(len(b)):
         MIN = a[i]
         MAX = b[i]
@@ -150,10 +151,10 @@ def evaluate_fit(data1, data2):
         S2a = S2[(MIN < S1) & (S1 < MAX)]
         S2b = S2_2[(MIN < S1_2) & (S1_2 < MAX)]
         if len(S2a) != 0 and len(S2b)!=0:
-            print("S1="+str(s1))
             stat = anderson_ksamp([S2a, S2b])
             print(stat)
-            stats.append(stat[0])
+            # print(stat)
+            table.append([s1, stat[0], stat[2]])
             if len(S2a)>len(S2b):
                 S2a = S2a[:len(S2b)]
             else:
@@ -167,38 +168,43 @@ def evaluate_fit(data1, data2):
             #     plt.hist(S2a, bins, alpha=0.5, label='x')
             #     plt.hist(S2b, bins, alpha=0.5, label='y')
             #     plt.show()
-    average_significance = np.average(stats)
-    return average_significance
+    return table
+
+def main():
+    # for mass in tqdm(np.logspace(1, 3, 10)):
+    #     sample_cont(mass)
+    #
+
+    data_true = np.load("Data/NR_Fit/GregNR.npy")
+    data_true = data_true[:1000]
+    # data_mask = data_true[0] < 100
+    # data_x = data_true[0][data_mask]
+    # data_y = data_true[1][data_mask]
+
+    # plot comparison between NEST and generated
+    # fig, ax = plt.subplots(1, 2, figsize=(9, 3), sharey=True)
+    # ax[0].scatter(data_x[0:1000], np.log10(data_y)[0:1000], alpha=0.1)
+    # ax[1].scatter(*generateNR(100, 1000), alpha=0.1)
+    # ax[0].set_xlim(0, 100)
+    # ax[1].set_xlim(0, 100)
+    # ax[0].set_title("NEST Data")
+    # ax[0].set_ylim(3, 5)
+    # ax[1].set_ylim(3, 5)
+    # ax[1].set_title("Analytic Data")
+    # plt.show()
+
+    # evaluate fit
+    print(data_true.shape)
+    total = []
+    data_ana = generateNR(10000, 100)
+    table = evaluate_fit(data_true, data_ana)
+    headers = ["S1 bin [phd]", "k-samp Anderson Statistic", "p-value"]
+    print(tabulate(table, headers, tablefmt="latex_longtable"))
+
+if __name__ == "__main__":
+    main()
 
 
-# for mass in tqdm(np.logspace(1, 3, 10)):
-#     sample_cont(mass)
-#
 
-# data_true = np.load("100G.npy")
-# data_mask = data_true[0] < 100
-# data_x = data_true[0][data_mask]
-# data_y = data_true[1][data_mask]
-
-# plot comparison between NEST and generated
-# fig, ax = plt.subplots(1, 2, figsize=(9, 3), sharey=True)
-# ax[0].scatter(data_x[0:1000], np.log10(data_y)[0:1000], alpha=0.1)
-# ax[1].scatter(*generateNR(100, 1000), alpha=0.1)
-# ax[0].set_xlim(0, 100)
-# ax[1].set_xlim(0, 100)
-# ax[0].set_title("NEST Data")
-# ax[0].set_ylim(3, 5)
-# ax[1].set_ylim(3, 5)
-# ax[1].set_title("Analytic Data")
-# plt.show()
-
-# evaluate fit
-# data_true[:10000]
-# print(data_true.shape)
-# total = 0
-# for i in range(10):
-#     data_ana = generateNR(1000, 10000)
-#     total += evaluate_fit(data_true, data_ana)
-# print(total/10)
 
 

@@ -31,6 +31,7 @@ def pois_like(mass, xsec, num_events, pred_ER, A=const.AXe, E_thr=6*const.keV):
     return poisson_prob, pred_NR
 
 
+
 def find_indices(E_r, events):
     new_events = np.zeros(len(events))
     for i in range(len(events)):

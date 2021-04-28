@@ -9,8 +9,8 @@ from numpy.random import randint
 from scipy.stats import lognorm, norm, loguniform
 
 
-tmass = 500
-events = 0
+tmass = 50
+events = 10
 
 # prior for evaluation. Rejects proposal point if prior is less than 0
 def log_prior(theta):
@@ -41,13 +41,13 @@ def log_probability(theta, data, predER):
     return lp + ll
 
 #
-# def proposal(vals, random):
-#     new_vals = np.empty_like(vals)
-#     factors = np.full((vals.shape[0]), 0)
-#     for i in range(vals.shape[0]):
-#         new_vals[i][0] = lognorm.rvs(0.3, loc=0, scale=vals[i][0])
-#         new_vals[i][1] = norm.rvs(vals[i][1], 1)
-#     return new_vals, factors
+def proposal(vals, random):
+    new_vals = np.empty_like(vals)
+    factors = np.full((vals.shape[0]), 0)
+    for i in range(vals.shape[0]):
+        new_vals[i][0] = lognorm.rvs(0.3, loc=0, scale=vals[i][0])
+        new_vals[i][1] = norm.rvs(vals[i][1], 1)
+    return new_vals, factors
 
 
 # data = np.load("Data/NR_Fit/Mass Data/1000G.npy")
@@ -68,12 +68,12 @@ s2 = np.concatenate((s2N, s2E))
 data = (s1, s2)
 
 ndim = 2
-nwalkers = 4
-steps = 30000
+nwalkers = 5
+steps = 50000
 pos = [[randint(3, 1000), randint(-49, -36)+0.001] for i in range(nwalkers)]
 predER = 1100
 cov = np.array([[1000, 0], [0, 1]])
-sampler = emcee.EnsembleSampler(nwalkers, ndim, log_probability, args=[data, predER])
+sampler = emcee.EnsembleSampler(nwalkers, ndim, log_probability, args=[data, predER], moves=emcee.moves.MHMove(proposal, ndim=2))
 
 sampler.run_mcmc(pos, steps, progress=True)
 tau = sampler.get_autocorr_time()
@@ -81,7 +81,7 @@ print(tau)
 
 flat_samples = sampler.get_chain(discard=0, flat=True)
 print(flat_samples.shape)
-np.save("Data/Execution files/samples1.npy", flat_samples)
+np.save("Data/Execution files/4", flat_samples)
 
 # mass, xsec, num_events
 

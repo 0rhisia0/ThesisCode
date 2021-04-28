@@ -1,11 +1,15 @@
 from scipy.optimize import curve_fit
-from scipy.stats import lognorm
+from scipy.stats import lognorm, anderson_ksamp
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import os
+import NReval
+from tabulate import tabulate
+
 
 plt.style.use("seaborn-talk")
+
 FUNC_NORM = lambda x, p1, p2: lognorm.pdf(x, s=p1, scale=p2, loc=0)
 FUNC_log = lambda x, p1, p2, p3: -p2/(x-p1)+p3
 
@@ -22,9 +26,11 @@ def main():
     files.sort()
     print(files)
     popts = []
+    table = []
     for data in files:
         mass = int(data[:-5])  # pull mass value from string
         vals = np.load("Data/NR_Fit/Mass Data/" + data)  # loads data
+        print(vals.shape)
         S1 = vals[0]
         S2 = vals[1]
         norms = np.zeros(len(b))  # initializes counts
@@ -41,11 +47,15 @@ def main():
                                          norms, bounds=([-np.inf, -np.inf], [np.inf, np.inf]),
                                          p0=[10, 0.5])
         # fits FUNC_NORM and returns parameters/covariance of fit
-
-        # test_plot(xvals, norms, norm_popt, mass)  # optional test plots
-
+        # testing anderson
+        evaluated = NReval.generateNR(mass, 300)[0]
+        stat = anderson_ksamp([evaluated, S1[:300]])
+        table.append([mass, stat[0], stat[2]])
+        test_plot(xvals, norms, norm_popt, mass)  # optional test plots
         popts.append([mass, *norm_popt])
-
+    table = sorted(table, key=lambda x: x[0])
+    headers = ["S1 bin [phd]", "k-samp Anderson Statistic", "p-value"]
+    print(tabulate(table, headers, tablefmt="latex_longtable"))
     popts = np.asarray(popts)
     optimums = []
 
@@ -55,13 +65,17 @@ def main():
         xvals = np.arange(3, 1000)
 
         optimums.append(opts)
-        print(FUNC_log(xvals, *opts)[0])
-        plt.plot(xvals, FUNC_log(xvals, *opts))
-        plt.xlabel("WIMP Mass [GeV]")
+        print(opts)
+        plt.plot(xvals, FUNC_log(xvals, *opts), color="black")
+        plt.xlabel("WIMP Mass [GeV]", fontsize=18)
+        plt.xscale("log")
         if i == 1:
-            plt.ylabel("Shape metric")
+            plt.ylabel(r"Shape metric, $\alpha$", fontsize=18)
+            plt.text(20, 0.4, r"$\alpha(m_{\chi}) = \frac{-12.2535678}{m_{\chi}+10.03005277}+ 1.07541932$", fontsize=20)
         else:
-            plt.ylabel("Scale metric")
+            plt.ylabel(r"Scale metric, $\omega$", fontsize=18)
+            plt.text(20, 4, r"$\omega(m_{\chi}) = \frac{-562.43584632}{m_{\chi}+26.85837188}+ 18.86300004$",
+                     fontsize=20)
         plt.show()
 
     np.save("Data/NR_Fit/norm_fits", optimums)
@@ -90,12 +104,11 @@ def test_plot(xvals, norms, norm_popt, mass):
     plt.scatter(xvals, norms)
     testx = np.arange(0, 70, 0.1)
     estim = FUNC_NORM(testx, *norm_popt)
-    plt.plot(testx, estim)
+    plt.plot(testx, estim, color="black")
     max = xvals[np.argmax(norms)]
-    plt.vlines(max, 0, np.max(norms))
-    plt.xlabel("S1[phd]")
-    plt.ylabel("Counts")
-    plt.title(str(mass)+"GeV")
+    plt.xlabel("S1[phd]", fontsize=17)
+    plt.ylabel("Counts", fontsize=17)
+    plt.title(str(mass)+r" GeV/c^2", fontsize=17)
     plt.show()
 
 
