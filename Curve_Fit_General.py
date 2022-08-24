@@ -1,14 +1,19 @@
-from scipy.stats import skewnorm, gamma
+from scipy.stats import skewnorm, gamma, anderson_ksamp
 from scipy.optimize import curve_fit
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from scipy.special import erfc
+from scipy.stats import lognorm
+from scipy.integrate import cumtrapz
+import EReval
+
 
 STEP = 0.05
 FUNC_EPS = lambda x, p1, p2, p3: p1 * (abs(x + p2)) ** 0.25 + p3
-FUNC_OME = lambda x, p1, p2, p3: p1 / (x - p2) + p3
-FUNC_ALP = lambda x, p1, p2: -p1 * x ** 0.5 + p2
+FUNC_OME = lambda x, p1, p2, p3, p4: p1/(x-p4) - p2/(x-p4)**2 + p3*(x-p4)
+FUNC_ALP = lambda x, p1, p2, p3, p4, p5: p1/(x-p4) - p2/(x-p4)**2 + p3*(x-p4)+p5
+FUNC_NORM = lambda x, p1, p2, p3, p4: p1/(x-p4)**(1.5) + p2/(x**3-p4) + p3
 
 def skewNormNew(x, xi, omega, alpha, A):
     """
@@ -18,20 +23,11 @@ def skewNormNew(x, xi, omega, alpha, A):
         -1. * alpha * (x - xi) / omega / np.sqrt(2.))
 
 
-""" Deprecated Skew normal function for fitting purposes"""
-# def skewNorm(S1, S2, eps_popt, omeg_popt, alp_popt, norm_popt):
-#     eps = FUNC_EPS(S1, eps_popt[0], eps_popt[1], eps_popt[2])
-#     omeg = FUNC_OME(S1, omeg_popt[0], omeg_popt[1], omeg_popt[2], omeg_popt[3], omeg_popt[4])
-#     alp = FUNC_ALP(S1, alp_popt[0], alp_popt[1], alp_popt[2], alp_popt[3])
-#     norm = FUNC_NORM(S1, norm_popt[0], norm_popt[1], norm_popt[2], norm_popt[3])
-#     return skewnorm.pdf(S2, alp, loc=eps, scale=omeg) * norm
-
-
-def getData():
+def getData(file):
     """
     loads Data from text file output by NEST
     """
-    f = open("ERDATA.txt", "r")
+    f = open(file, "r")
     lines = f.readlines()
     S1 = np.zeros(len(lines))
     S2 = np.zeros(len(lines))
@@ -87,6 +83,7 @@ def fitToS1S2(data):
         popt, pcov = curve_fit(skewNormNew, bin_centers, y, p0=[4, 0.1, 0, norm_fact],
                                bounds=([logS2Min, 0., -3., 0.], [logS2Max, 1., 3., 1e7]))
         xi[i], ome[i], alp[i], norms[i] = popt
+        norms[i] = norm_fact  # retain true value for fitting instead of fitted value
         S1_param[i] = (MIN + MAX) / 2
 
 
@@ -105,7 +102,7 @@ def fitToS1S2(data):
         # fig.savefig("C:/Users/Ishira/Pictures/LZ/GIF/" + str(i) + "_GREG.png")
         # plt.close(fig)
     a = np.stack((S1_param, xi, ome, alp, norms))
-    np.save('Data/NR_Fit/fit_data', a)
+    np.save('Data/ER_Fit/ER_fit_data', a)  # saves fit
     print(a)
 
 
@@ -145,52 +142,83 @@ def main():
     """
     main loop to load, fit and interpolate slices
     """
-
-    # data = np.load('Data/NR_Fit/GregNR.npy')  # data to be fit loaded from clean numpy file
+    # data = getData('Data/ER_Fit/ERDATA.txt')
+    # np.save('Data/ER_Fit/ER_data_np', data)  # data to be fit loaded from clean numpy file
+    data = np.load('Data/ER_Fit/ER_data_np.npy')
     # fitToS1S2(data)
-    #
-    # # Parameter fits
-    a = np.load('Data/NR_Fit/fit_data.npy')  # params generated from fit
+
+    # Parameter fits
+    a = np.load('Data/ER_Fit/ER_fit_data.npy')  # params generated from fit
 
     # fit epsilon param
     eps_popt, eps_pcov = curve_fit(FUNC_EPS, a[0], a[1])
     plt.scatter(a[0], a[1])
     eps = FUNC_EPS(a[0], eps_popt[0], eps_popt[1], eps_popt[2])
-    print(eps_popt)
     plt.plot(a[0], eps, color="r")
+    print(eps_popt)
     plt.ylabel(r'Location, $\varepsilon$', fontsize=17)
     plt.xlabel("S1[phd]", fontsize=17)
-    plt.text(5, 3, r"$\varepsilon(S1)\approx 0.2614\cdot (|S1-1.7988|)^{0.25}+3.4837$", fontsize=14)
     plt.ylim(2, 5)
+    plt.text(5, 3, r"$\varepsilon(S1)\approx 0.4656\cdot (|S1+6.0221|)^{0.25}+3.1364$", fontsize=14)
     plt.show()
 
     # fit ome param
     omeg_popt, omeg_pcov = curve_fit(FUNC_OME, a[0], a[2])
     plt.scatter(a[0], a[2])
-    omeg = FUNC_OME(a[0], omeg_popt[0], omeg_popt[1], omeg_popt[2])
+    omeg = FUNC_OME(a[0], omeg_popt[0], omeg_popt[1], omeg_popt[2], omeg_popt[3])
     print(omeg_popt)
-    plt.plot(a[0], omeg, color="r")
-    plt.text(15, 0.25, r"$\omega(S1)\approx \frac{1.9934}{S1+6.1245}+0.0458$", fontsize=16)
-    plt.ylabel(r'Shape, $\omega$', fontsize=17)
+    plt.plot(a[0], omeg, color="red")
+    plt.ylabel(r'Scale, $\omega$', fontsize=17)
     plt.xlabel("S1[phd]", fontsize=17)
-
     plt.ylim(0, .4)
+    plt.text(0, 0.25, r"$\omega(S1)\approx\frac{114.1}{S1+35.078}-\frac{299.91}{(S1+35.078)^2}+0.00042\cdot(S1+35.078)$", fontsize=12)
     plt.show()
 
     # fit alp param
     alp_popt, alp_pcov = curve_fit(FUNC_ALP, a[0], a[3])
+    print(alp_popt)
     plt.scatter(a[0], a[3])
     plt.ylim(-3, 3)
-    alp = FUNC_ALP(a[0], alp_popt[0], alp_popt[1])
+    alp = FUNC_ALP(a[0], alp_popt[0], alp_popt[1], alp_popt[2], alp_popt[3], alp_popt[4])
     print(alp_popt)
-    plt.plot(a[0], alp, color="r")
-    plt.text(20, 1.5, r"$\alpha(S1)\approx 0.3536\cdot S1^{0.5}-2.4605$", fontsize=16)
+    plt.text(0, -1,
+             r"$\alpha(S1)\approx\frac{226.6}{S1+18.91}-\frac{3434.2}{(S1+18.91)^2}+0.0184\cdot(S1+18.91)-2.401$",
+             fontsize=11.5)
+    plt.plot(a[0], alp, color="red")
     plt.ylabel(r'Skewness, $\alpha$', fontsize=17)
     plt.xlabel("S1[phd]", fontsize=17)
     plt.show()
 
-    opts = np.asarray([eps_popt, omeg_popt, alp_popt])
-    np.save("Data/NR_Fit/NR_popts", opts)  # saves interpolation parameters
+    # fit normalization
+    norm_factor = np.sum(a[4])
+    norm_counts = a[4]/norm_factor
+    norm_popt, norm_pcov = curve_fit(FUNC_NORM, a[0], norm_counts,
+                                     bounds=([-np.inf, -np.inf, -np.inf, -10], [np.inf, np.inf, np.inf, -1]))
+    plt.scatter(a[0], norm_counts)
+    domain = np.linspace(1.5, 100, 500)
+    norms = FUNC_NORM(domain, norm_popt[0], norm_popt[1], norm_popt[2], norm_popt[3])
+    norm_area = cumtrapz(norms, domain)
+    print(norm_popt)
+    plt.plot(domain, norms, color="red")
+    plt.ylabel("Counts", fontsize=17)
+    plt.xlabel("S1[phd]", fontsize=17)
+    plt.text(5, 0.005, r"$N(S1)\approx \frac{0.055}{(S1+1.502) ^ {1.5}} - \frac{0.141}{S1^3+1.502}+0.01$", fontsize=15)
+    plt.ylim(0, 0.015)
+    plt.show()
+    norm_popt = np.append(norm_popt, norm_area[-1])
+    opts = np.asarray([eps_popt, omeg_popt, alp_popt, norm_popt])
+
+    S1_act = data[0, :]
+    S1_act = S1_act[S1_act<100][:10000]
+    S1_pred = EReval.generateER(10000)[0]
+    plt.hist(S1_act, alpha=0.8)
+    plt.hist(S1_pred, alpha=0.8)
+    plt.show()
+    # print(anderson_ksamp([S1_act, S1_pred]))
+    np.save("Data/ER_Fit/ER_popts", opts)  # saves interpolation parameters
+    print(opts)
+
+
 
 
 if __name__ == "__main__":
